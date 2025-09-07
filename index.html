@@ -1,138 +1,527 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Neon Realms – Level 4 Test</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Neon Realms — 4-Level Demo (Lv4: Slightly Tougher)</title>
   <style>
-    html, body { height:100%; margin:0; background:#000; overflow:hidden; }
-    canvas { display:block; margin:0 auto; background:#111; }
-    #hud { position:fixed; top:10px; left:10px; color:#0ff; font-family:monospace; font-size:14px; }
-    button { position:fixed; bottom:10px; width:80px; height:60px; font-size:14px; border-radius:8px; background:#111; color:#0ff; border:1px solid #0ff; }
-    #left { left:10px; }
-    #right { left:100px; }
-    #jump { right:100px; }
-    #dash { right:10px; }
+    html, body { height:100%; margin:0; background:#0a0a12; color:#e8f0ff; font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif; }
+    canvas { display:block; width:100vw; height:100vh; touch-action:none; }
+    #hud { position:fixed; left:8px; top:8px; z-index:11; background:#101022; border:1px solid #2b2b64; border-radius:10px; padding:8px 10px; font-size:12px; opacity:.96; min-width: 240px; }
+    #hud .row { display:flex; justify-content:space-between; gap:10px; align-items:center; }
+    #buttons { position:fixed; left:12px; bottom:16px; display:flex; gap:8px; z-index:10; }
+    .btn { width:64px; height:64px; border-radius:14px; border:1px solid #2b2b64;
+      background:radial-gradient(100% 100% at 50% 0%, #1a1a36 0%, #0e0e1f 100%); color:#bfe2ff; font-weight:800; font-size:10px; }
+    #dashBtn { position:fixed; right:12px; bottom:88px; width:64px; height:64px; border-radius:14px; border:1px solid #2b2b64;
+      background:radial-gradient(100% 100% at 50% 0%, #1a1a36 0%, #0e0e1f 100%); color:#bfe2ff; font-weight:800; font-size:10px; display:block; z-index:10; }
+    #jumpBtn { position:fixed; right:12px; bottom:16px; }
+    #overlay { position:fixed; inset:0; display:none; z-index:20; align-items:center; justify-content:center; background:rgba(8,8,16,0.55); }
+    #overlay .card { background:#0d0d1fdd; border:1px solid #63d7ff; color:#e8f0ff; padding:16px 22px; border-radius:14px; text-align:center; min-width:320px; }
+    #overlay h2 { margin:0 0 8px 0; font-size:22px; }
+    #overlay p  { margin:6px 0; font-size:14px; color:#bfe2ff; }
+    #overlay .score { font-size:28px; margin-top:8px; }
+    #overlay .btnbar { margin-top:12px; display:flex; gap:8px; justify-content:center; }
+    #overlay button { padding:8px 12px; border-radius:10px; border:1px solid #2b2b64; background:#131333; color:#cfe9ff; font-weight:700; }
   </style>
 </head>
 <body>
-  <canvas id="game" width="800" height="480"></canvas>
-  <div id="hud">Level: <span id="levelDisp">1</span>/4</div>
-  <button id="left">LEFT</button>
-  <button id="right">RIGHT</button>
-  <button id="jump">JUMP</button>
-  <button id="dash">DASH</button>
+  <canvas id="game"></canvas>
+
+  <div id="hud">
+    <div class="row"><span id="levelLbl">Level 1/4</span><span id="dashLbl">Dash: READY</span></div>
+    <div class="row"><span id="deathLbl">Deaths: 0</span><span id="timerLbl">Time: 0.00</span></div>
+  </div>
+
+  <div id="buttons">
+    <button class="btn" id="leftBtn">LEFT</button>
+    <button class="btn" id="rightBtn">RIGHT</button>
+    <button class="btn" id="jumpBtn">JUMP</button>
+  </div>
+  <button id="dashBtn">DASH</button>
+
+  <div id="overlay">
+    <div class="card" id="card">
+      <h2 id="ovTitle">Level Complete!</h2>
+      <p id="ovBody"></p>
+      <div class="score" id="ovScore">Score: 0</div>
+      <p id="ovPB"></p>
+      <div class="btnbar" id="ovBtns">
+        <button id="nextBtn">Next</button>
+        <button id="retryBtn">Retry</button>
+      </div>
+    </div>
+  </div>
 
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+(() => {
+  const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d', { alpha:false });
+  function resize(){ canvas.width = Math.floor(innerWidth*DPR); canvas.height = Math.floor(innerHeight*DPR); }
+  addEventListener('resize', resize); resize();
 
-let player = {x:50, y:400, w:30, h:30, vx:0, vy:0, onGround:false, dashReady:true};
-let keys = {left:false,right:false,jump:false,dash:false};
-let gravity = 0.8, jumpStrength = 15, moveSpeed=5, dashSpeed=14;
-let currentLevel = 0;
+  // HUD refs
+  const levelLbl = document.getElementById('levelLbl');
+  const dashLbl = document.getElementById('dashLbl');
+  const timerLbl = document.getElementById('timerLbl');
+  const deathLbl = document.getElementById('deathLbl');
+  const overlay = document.getElementById('overlay');
+  const ovTitle = document.getElementById('ovTitle');
+  const ovBody  = document.getElementById('ovBody');
+  const ovScore = document.getElementById('ovScore');
+  const ovPB    = document.getElementById('ovPB');
+  const nextBtn = document.getElementById('nextBtn');
+  const retryBtn= document.getElementById('retryBtn');
 
-const levels = [
-  // Level 1 simple floor
-  {pads:[{x:0,y:440,w:800,h:40}], goal:{x:700,y:400,w:40,h:40}},
-  // Level 2 gap
-  {pads:[{x:0,y:440,w:300,h:40},{x:400,y:440,w:400,h:40}], goal:{x:700,y:400,w:40,h:40}},
-  // Level 3 floating block
-  {pads:[{x:0,y:440,w:800,h:40},{x:350,y:360,w:100,h:20}], goal:{x:700,y:320,w:40,h:40}},
-  // Level 4 test template
-  {pads:[
-      {x:0,y:440,w:200,h:40},          // start platform
-      {x:250,y:400,w:120,h:20},        // small ledge
-      {x:420,y:360,w:140,h:20},        // higher ledge
-      {x:600,y:440,w:200,h:40}         // flat ground near goal
-    ],
-   goal:{x:730,y:400,w:40,h:40}}
-];
+  // Inputs
+  const leftBtn = document.getElementById('leftBtn');
+  const rightBtn = document.getElementById('rightBtn');
+  const jumpBtn = document.getElementById('jumpBtn');
+  const dashBtn = document.getElementById('dashBtn');
+  const keys = { left:false, right:false, jump:false };
+  const setKey=(k,v)=>keys[k]=v;
+  let jumpEdge=false, lastJumpTapMs=-1;
+  function tapJump(){ jumpEdge=true; lastJumpTapMs=performance.now(); }
 
-function resetPlayer(){
-  player.x = 50; player.y=200; player.vx=0; player.vy=0; player.onGround=false; player.dashReady=true;
-}
-resetPlayer();
+  function bindHold(el,key){
+    el.addEventListener('pointerdown',e=>{ e.preventDefault(); setKey(key,true); if(key==='jump') tapJump(); }, {passive:false});
+    el.addEventListener('pointerup',e=>{ e.preventDefault(); setKey(key,false); }, {passive:false});
+    el.addEventListener('touchstart',e=>{ e.preventDefault(); setKey(key,true); if(key==='jump') tapJump(); }, {passive:false});
+    el.addEventListener('touchend',e=>{ e.preventDefault(); setKey(key,false); }, {passive:false});
+  }
+  bindHold(leftBtn,'left'); bindHold(rightBtn,'right'); bindHold(jumpBtn,'jump');
 
-function update(){
-  // Input
-  if(keys.left) player.vx = -moveSpeed;
-  else if(keys.right) player.vx = moveSpeed;
-  else player.vx = 0;
+  addEventListener('keydown',e=>{ if(e.repeat) return;
+    if(e.code==='ArrowLeft'||e.code==='KeyA') setKey('left',true);
+    if(e.code==='ArrowRight'||e.code==='KeyD') setKey('right',true);
+    if(e.code==='Space'||e.code==='KeyW'||e.code==='ArrowUp'){ setKey('jump',true); tapJump(); }
+    if(e.code==='ShiftLeft'||e.code==='ShiftRight') tryDash(player.facing||1);
+  });
+  addEventListener('keyup',e=>{
+    if(e.code==='ArrowLeft'||e.code==='KeyA') setKey('left',false);
+    if(e.code==='ArrowRight'||e.code==='KeyD') setKey('right',false);
+    if(e.code==='Space'||e.code==='KeyW'||e.code==='ArrowUp') setKey('jump',false);
+  });
+  dashBtn.addEventListener('pointerup', e=>{ e.preventDefault(); tryDash(player.facing||1); });
 
-  if(keys.jump && player.onGround){
-    player.vy = -jumpStrength;
-    player.onGround = false;
+  // World helpers
+  const groundY=520;
+  function rect(x,y,w,h){ return {t:'rect',x,y,w,h}; }
+  function slope(x1,y1,x2,y2){ return {t:'slope',x1,y1,x2,y2,minX:Math.min(x1,x2),maxX:Math.max(x1,x2)}; }
+  function slopeYAt(s,x){ const t=(x-s.x1)/(s.x2-s.x1); return s.y1 + t*(s.y2 - s.y1); }
+  function spike(x,y,w,h){ return {t:'spike',x,y,w,h}; }
+  function laser(x,y,w,h,axis='y',amp=0,speed=0){ return {t:'laser',x,y,w,h,axis,amp,speed,phase:Math.random()*Math.PI*2}; }
+  function drone(x,y,minX,maxX,speed){ return {t:'drone',x,y,w:36,h:24,minX,maxX,dir:1,speed}; }
+  function hover(x,y,minY,maxY,speed){ return {t:'hover',x,y,w:34,h:22,minY,maxY,dir:1,speed}; }
+  function goal(x,y){ return {t:'goal',x,y,w:36,h:120}; }
+
+  // Levels 1–3 (same feel as our polished set)
+  function buildLevel1(){
+    const pads=[]; const hz=[]; const en=[];
+    let x=40; while(x<3600){ const segW=420, gap=140; pads.push(rect(x, groundY, segW, 30)); x += segW + gap; }
+    pads.push(slope(900, groundY+30, 1080, groundY-140));
+    pads.push(rect(1400, groundY-110, 220, 18));
+    pads.push(rect(1900, groundY-200, 220, 18));
+    hz.push(spike(1200, groundY, 80, 40));
+    hz.push(laser(2200, groundY-170, 18, 170, 'y', 80, 1.1));
+    en.push(drone(1650, groundY-140, 1600, 1850, 120));
+    const g = goal(3300, groundY-120);
+    return {pads,hz,en,goal:g,length:3600};
+  }
+  function buildLevel2(){
+    const pads=[]; const hz=[]; const en=[];
+    let x=40; while(x<4200){ const segW=360, gap=160; pads.push(rect(x, groundY, segW, 30)); x += segW + gap; }
+    pads.push(slope(700, groundY+30, 900, groundY-160));
+    pads.push(rect(1350, groundY-140, 200, 18));
+    pads.push(rect(1700, groundY-260, 200, 18));
+    pads.push(rect(2300, groundY-100, 220, 18));
+    hz.push(spike(1100, groundY, 100, 40));
+    hz.push(laser(2000, groundY-180, 18, 220, 'y', 120, 1.5));
+    hz.push(laser(2600, groundY-40, 220, 16, 'x', 100, 1.0));
+    en.push(drone(1500, groundY-170, 1450, 1750, 150));
+    en.push(hover(2450, groundY-200, groundY-260, groundY-120, 60));
+    const g = goal(3900, groundY-120);
+    return {pads,hz,en,goal:g,length:4200};
+  }
+  function buildLevel3(){
+    const pads=[]; const hz=[]; const en=[];
+    let x=40; while(x<4800){ const segW=320, gap=180; pads.push(rect(x, groundY, segW, 30)); x += segW + gap; }
+    pads.push(slope(900, groundY+30, 1080, groundY-180));
+    pads.push(rect(1500, groundY-180, 200, 18));
+    pads.push(rect(1900, groundY-300, 200, 18));
+    pads.push(rect(2550, groundY-220, 200, 18));
+    hz.push(spike(1250, groundY, 120, 40));
+    hz.push(laser(2100, groundY-200, 18, 240, 'y', 140, 1.6));
+    hz.push(laser(3000, groundY-60, 260, 16, 'x', 160, 1.2));
+    hz.push(spike(3400, groundY, 100, 40));
+    en.push(drone(1700, groundY-210, 1650, 1950, 170));
+    en.push(hover(2850, groundY-220, groundY-300, groundY-120, 70));
+    en.push(drone(3300, groundY-30, 3250, 3550, 140));
+    const g = goal(4500, groundY-120);
+    return {pads,hz,en,goal:g,length:4800};
   }
 
-  if(keys.dash && player.dashReady){
-    player.vx = (keys.right?1:keys.left?-1:1)*dashSpeed;
-    player.dashReady = false;
+  // ---------- Level 4: Slightly Tougher "More of the Same" ----------
+  // Small difficulty bump: a bit longer, slightly wider gaps, one extra slope,
+  // + one extra drone & laser. No new mechanics.
+  function buildLevel4(){
+    const pads=[]; const hz=[]; const en=[];
+    let x=40; while(x<5200){ const segW=340, gap=190; pads.push(rect(x, groundY, segW, 30)); x += segW + gap; } // +10–20% wider gaps
+    // Familiar slope rhythm
+    pads.push(slope(820, groundY+30, 1040, groundY-160));    // up
+    pads.push(rect(1320, groundY-140, 200, 18));
+    pads.push(slope(1600, groundY-160, 1820, groundY+10));   // down
+    pads.push(rect(2100, groundY-180, 200, 18));
+    pads.push(rect(2480, groundY-260, 200, 18));             // slightly higher check
+    pads.push(rect(2950, groundY-200, 220, 18));
+    pads.push(slope(3350, groundY-200, 3600, groundY+10));   // extra slope to keep flow
+    // Hazards — same types, just +1 each
+    hz.push(spike(1200, groundY, 100, 40));
+    hz.push(laser(2200, groundY-200, 18, 220, 'y', 120, 1.45));
+    hz.push(laser(3050, groundY-50, 240, 16, 'x', 120, 1.1));
+    // Enemies — one more drone patrol later
+    en.push(drone(1750, groundY-170, 1700, 1950, 150));
+    en.push(drone(3400, groundY-120, 3320, 3580, 160));
+    const g = goal(4900, groundY-120);
+    return {pads,hz,en,goal:g,length:5200};
+  }
+  // ------------------------------------------------------------------
+
+  const LEVELS=[buildLevel1(), buildLevel2(), buildLevel3(), buildLevel4()];
+  let levelIndex=0; function currentL(){ return LEVELS[levelIndex]; }
+
+  // Player & physics
+  const player={x:120,y:420,w:30,h:36,vx:0,vy:0,onGround:false,facing:1};
+  const MOVE=360, G=2200, JUMP=780;
+  const COYOTE=0.12; let coyote=0;
+
+  // Dash + dash-jump
+  const DASH_SPEED=1700, DASH_COOLDOWN=0.85;
+  const DJ_MIN=0.06, DJ_MAX=0.30, DJ_BOOST=300;
+  let dashCooldown=0, dashStartMs=-1, djDone=false;
+  const TRAIL_MS=140; const trail=[];
+  function tryDash(dir){
+    if (dashCooldown>0) return;
+    player.vx = dir * DASH_SPEED;
+    dashCooldown = DASH_COOLDOWN;
+    dashStartMs = performance.now();
+    djDone = false;
+    emitBurst(player.x+player.w/2, player.y+player.h/2, dir);
   }
 
-  // Gravity
-  player.vy += gravity;
-  player.y += player.vy;
-  player.x += player.vx;
+  // Particles
+  const particles=[];
+  function emitBurst(x,y,dir){
+    for(let i=0;i<12;i++){
+      const a = (Math.random()*0.6 - 0.3) + (dir>0?0:Math.PI);
+      const sp = 220 + Math.random()*260;
+      particles.push({x,y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, life:400, max:400, c:'#ff6fa6'});
+    }
+  }
+  function emitPortalSwirl(cx,cy){
+    for(let i=0;i<6;i++){
+      const a = Math.random()*Math.PI*2;
+      const r = 24 + Math.random()*28;
+      const sp = 60 + Math.random()*90;
+      particles.push({x:cx+Math.cos(a)*r, y:cy+Math.sin(a)*r, vx:-Math.sin(a)*sp, vy:Math.cos(a)*sp, life:500, max:500, c:'#c9fff7'});
+    }
+  }
 
-  // Collisions
-  player.onGround = false;
-  for(const p of levels[currentLevel].pads){
-    if(player.x < p.x+p.w && player.x+player.w > p.x &&
-       player.y < p.y+p.h && player.y+player.h > p.y){
-      if(player.vy>0){ // landing
-        player.y = p.y-player.h;
-        player.vy = 0;
-        player.onGround = true;
-        player.dashReady = true;
+  // Scoring + Progress
+  let run = { level:1, deaths:0, timeStart:performance.now(), levelTimes:[0,0,0,0], levelDeaths:[0,0,0,0], levelScores:[0,0,0,0], totalScore:0 };
+  const SCORE = { base:1000, timeK:5, deathK:50 };
+  function levelScore(sec, deaths){ return Math.max(0, Math.round(SCORE.base - sec*SCORE.timeK - deaths*SCORE.deathK)); }
+  function savePB(levelIndex, sec, score, totalScore){
+    try{
+      const keyL = `neon_pb_L${levelIndex+1}`;
+      const prev = JSON.parse(localStorage.getItem(keyL) || 'null');
+      if(!prev || sec < prev.time || score > prev.score){
+        localStorage.setItem(keyL, JSON.stringify({time:sec, score:score}));
+      }
+      const keyRun = `neon_pb_RUN`;
+      const prevRun = JSON.parse(localStorage.getItem(keyRun) || 'null');
+      if(!prevRun || totalScore > prevRun.totalScore){
+        localStorage.setItem(keyRun, JSON.stringify({totalScore}));
+      }
+    }catch(e){}
+  }
+  function readPBHUD(){
+    /* Minimal PB HUD removed for mobile clarity in this cut;
+       easy to re-add if you want it back */
+  }
+
+  function respawn(start=false, death=false){
+    player.x = 120; player.y = 420; player.vx=0; player.vy=0; player.onGround=false; coyote=0;
+    if (death){ run.deaths++; deathLbl.textContent = 'Deaths: ' + run.deaths; screenFlash=140; }
+    if (start){ camX = player.x; camY = groundY-120; }
+  }
+
+  // Camera — tuned/clamped look-ahead + smoother follow
+  let camX=0, camY=groundY-120, lookAhead=0, last=performance.now();
+  const LOOK_BASE = 140, LOOK_SPEED_FACTOR = 0.35, LOOK_AIR_BONUS = 80, LOOK_SMOOTH = 7.0, TELEGRAPH_AHEAD = 1600;
+
+  // Screen flash on hit
+  let screenFlash = 0;
+
+  function startLevel(i){
+    levelIndex = Math.max(0, Math.min(LEVELS.length-1, i));
+    levelLbl.textContent = `Level ${levelIndex+1}/${LEVELS.length}`;
+    respawn(true);
+    run.level = levelIndex+1;
+    run.deaths = 0;
+    run.timeStart = performance.now();
+    deathLbl.textContent = 'Deaths: 0';
+  }
+  startLevel(0);
+
+  function updateHazards(dt, hz){
+    for(const h of hz){
+      if(h.t==='laser'){
+        const t = performance.now()/1000 + (h.phase||0);
+        h.offset = Math.sin(t*h.speed)*h.amp;
+      }
+    }
+  }
+  function updateEnemies(dt, en){
+    for(const e of en){
+      if(e.t==='drone'){
+        e.x += e.dir * e.speed * dt;
+        if(e.x < e.minX){ e.x=e.minX; e.dir=1; }
+        if(e.x + e.w > e.maxX){ e.x=e.maxX - e.w; e.dir=-1; }
+      } else if(e.t==='hover'){
+        e.y += e.dir * e.speed * dt;
+        if(e.y < e.minY){ e.y=e.minY; e.dir=1; }
+        if(e.y + e.h > e.maxY){ e.y=e.maxY - e.h; e.dir=-1; }
       }
     }
   }
 
-  // Goal check
-  const g = levels[currentLevel].goal;
-  if(player.x < g.x+g.w && player.x+player.w > g.x &&
-     player.y < g.y+g.h && player.y+player.h > g.y){
-    currentLevel++;
-    if(currentLevel>=levels.length){ currentLevel=0; }
-    resetPlayer();
-    document.getElementById("levelDisp").textContent = currentLevel+1;
+  function showLevelResults(sec, deaths, score, isEnd){
+    overlay.style.display='flex';
+    ovTitle.textContent = isEnd ? 'Run Complete!' : `Level ${levelIndex+1} Complete!`;
+    ovBody.textContent  = `Time: ${sec.toFixed(2)}s • Deaths: ${deaths}`;
+    ovScore.textContent = `Score: ${score}`;
+    ovPB.textContent = '';
+    nextBtn.onclick = ()=>{
+      overlay.style.display='none';
+      if(isEnd){ startLevel(0); }
+      else { if(levelIndex < LEVELS.length-1){ startLevel(levelIndex+1); } else { startLevel(0); } }
+    };
+    retryBtn.onclick = ()=>{ overlay.style.display='none'; startLevel(levelIndex); };
   }
-}
 
-function draw(){
-  ctx.fillStyle="#000"; ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle="#0ff";
-  for(const p of levels[currentLevel].pads){ ctx.fillRect(p.x,p.y,p.w,p.h); }
-  ctx.fillStyle="#f0f"; const g = levels[currentLevel].goal; ctx.fillRect(g.x,g.y,g.w,g.h);
-  ctx.fillStyle="#0f0"; ctx.fillRect(player.x,player.y,player.w,player.h);
-}
+  function step(now){
+    const dt=Math.min(0.033,(now-last)/1000); last=now;
+    const L = currentL();
 
-function loop(){
-  update(); draw();
-  requestAnimationFrame(loop);
-}
-loop();
+    // HUD
+    timerLbl.textContent = 'Time: ' + ((now - run.timeStart)/1000).toFixed(2);
+    dashCooldown = Math.max(0, dashCooldown - dt);
+    dashLbl.textContent = 'Dash: ' + (dashCooldown>0? dashCooldown.toFixed(1)+'s' : 'READY');
 
-// Mobile controls
-document.getElementById("left").onmousedown=()=>keys.left=true;
-document.getElementById("left").onmouseup=()=>keys.left=false;
-document.getElementById("right").onmousedown=()=>keys.right=true;
-document.getElementById("right").onmouseup=()=>keys.right=false;
-document.getElementById("jump").onmousedown=()=>keys.jump=true;
-document.getElementById("jump").onmouseup=()=>keys.jump=false;
-document.getElementById("dash").onmousedown=()=>keys.dash=true;
-document.getElementById("dash").onmouseup=()=>keys.dash=false;
+    // Inputs & movement
+    const dir=(keys.right?1:0) - (keys.left?1:0);
+    if (dir!==0) player.facing=dir;
+    player.vx += (dir*360 - player.vx)*0.30;
+    player.vy += 2200*dt;
+    if (player.onGround) coyote = 0.12; else coyote = Math.max(0, coyote - dt);
+    if (jumpEdge && (player.onGround || coyote>0)){ player.vy = -780; coyote=0; }
+    jumpEdge=false;
 
-// Touch (for mobile phones)
-document.getElementById("left").ontouchstart=()=>keys.left=true;
-document.getElementById("left").ontouchend=()=>keys.left=false;
-document.getElementById("right").ontouchstart=()=>keys.right=true;
-document.getElementById("right").ontouchend=()=>keys.right=false;
-document.getElementById("jump").ontouchstart=()=>keys.jump=true;
-document.getElementById("jump").ontouchend=()=>keys.jump=false;
-document.getElementById("dash").ontouchstart=()=>keys.dash=true;
-document.getElementById("dash").ontouchend=()=>keys.dash=false;
+    // Dash-jump window
+    const djDelta = (lastJumpTapMs>0 && dashStartMs>0) ? (lastJumpTapMs - dashStartMs) : -1e9;
+    if (!djDone && djDelta >= 0.06*1000 && djDelta <= 0.30*1000){
+      player.vy = Math.min(player.vy,0) - 300; djDone = true;
+    }
+
+    // Update hazards/enemies
+    updateHazards(dt, L.hz);
+    updateEnemies(dt, L.en);
+
+    // Trail & particles (lightweight)
+    const nowMs = performance.now();
+    if(dashStartMs>0 && nowMs-dashStartMs<140){
+      trail.push({x:player.x, y:player.y, age: (nowMs-dashStartMs)});
+    }
+    for(let i=trail.length-1;i>=0;i--){ trail[i].age += dt*1000; if(trail[i].age>140) trail.splice(i,1); }
+    for(let i=particles.length-1;i>=0;i--){ const p=particles[i]; p.x+=p.vx*dt; p.y+=p.vy*dt; p.vx*=0.98; p.vy*=0.98; p.life-=dt*1000; if(p.life<=0) particles.splice(i,1); }
+
+    // Integrate
+    let nx=player.x + player.vx*dt, ny=player.y + player.vy*dt;
+
+    // Collide Y/X with rects
+    let grounded=false;
+    const boxY={x:nx,y:ny,w:player.w,h:player.h};
+    for(const p of L.pads){
+      if(p.t==='rect'){
+        if(!(boxY.x < p.x + p.w && boxY.x + boxY.w > p.x && boxY.y < p.y + p.h && boxY.y + boxY.h > p.y)) continue;
+        if(player.vy>0){ ny=p.y - player.h; player.vy=0; grounded=true; }
+        else if(player.vy<0){ ny=p.y + p.h; player.vy=0; }
+        boxY.y=ny;
+      }
+    }
+    const boxX={x:nx,y:ny,w:player.w,h:player.h};
+    for(const p of L.pads){
+      if(p.t==='rect'){
+        if(!(boxX.x < p.x + p.w && boxX.x + boxX.w > p.x && boxX.y < p.y + p.h && boxX.y + p.h > p.y)) continue;
+        if(player.vx>0){ nx=p.x - player.w; player.vx=0; }
+        else if(player.vx<0){ nx=p.x + p.w; player.vx=0; }
+        boxX.x=nx;
+      }
+    }
+    // Slopes as ground
+    const feetX = nx + player.w*0.5;
+    for(const p of L.pads){
+      if(p.t!=='slope') continue;
+      if(feetX < p.minX || feetX > p.maxX) continue;
+      const ySurf = slopeYAt(p, feetX);
+      if (ny + player.h >= ySurf - 0.5 && player.vy >= 0){ ny = ySurf - player.h; player.vy=0; grounded=true; }
+    }
+    player.x=nx; player.y=ny; player.onGround=grounded;
+
+    // Collisions with hazards/enemies
+    const px={x:player.x,y:player.y,w:player.w,h:player.h};
+    function hit(a,b){ return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
+    let died=false;
+    for(const h of L.hz){
+      if(h.t==='spike'){
+        const hb={x:h.x,y:h.y - h.h, w:h.w, h:h.h};
+        if(hit(px,hb)) { died=true; break; }
+      } else if(h.t==='laser'){
+        const hb={x:(h.axis==='x'?(h.x + (h.offset||0)):h.x),
+                  y:(h.axis==='y'?(h.y + (h.offset||0)):h.y), w:h.w, h:h.h};
+        if(hit(px,hb)) { died=true; break; }
+      }
+    }
+    if(!died){
+      for(const e of L.en){
+        const hb={x:e.x,y:e.y,w:e.w,h:e.h};
+        if(hit(px,hb)) { died=true; break; }
+      }
+    }
+    if(died){ respawn(false, true); }
+
+    // Goal
+    const g = L.goal;
+    if(hit(px, g)){
+      const sec = (performance.now() - run.timeStart)/1000;
+      const deaths = run.deaths;
+      const score = Math.max(0, Math.round(1000 - sec*5 - deaths*50));
+      overlay.style.display='flex';
+      ovTitle.textContent = (levelIndex===LEVELS.length-1) ? 'Run Complete!' : `Level ${levelIndex+1} Complete!`;
+      ovBody.textContent  = `Time: ${sec.toFixed(2)}s • Deaths: ${deaths}`;
+      ovScore.textContent = `Score: ${score}`;
+      nextBtn.onclick = ()=>{
+        overlay.style.display='none';
+        if(levelIndex < LEVELS.length-1){ startLevel(++levelIndex); } else { startLevel(0); }
+      };
+      retryBtn.onclick = ()=>{ overlay.style.display='none'; startLevel(levelIndex); };
+      return requestAnimationFrame(step);
+    }
+
+    // Fall respawn
+    if (player.y > groundY + 900){ respawn(false, true); }
+
+    // Camera: look-ahead with clamp + smoother follow
+    const viewW = canvas.width / DPR;
+    const baseLA = 140 + Math.abs(player.vx)*0.35 + (player.onGround?0:80);
+    const maxLA = (player.onGround ? viewW*0.28 : viewW*0.34);
+    let targetLA = baseLA * (player.facing>=0 ? 1 : -1);
+    targetLA = Math.max(-maxLA, Math.min(maxLA, targetLA));
+    lookAhead += (targetLA - lookAhead) * Math.min(1, dt*7.0);
+    camX += ((player.x + lookAhead) - camX) * Math.min(1, dt*7.0);
+    camY += ((player.y - 80) - camY) * Math.min(1, dt*7.0);
+
+    render(L);
+    requestAnimationFrame(step);
+  }
+
+  function render(L){
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // BG grid
+    const s=32*DPR, gx=-(camX%s), gy=-(camY%s);
+    ctx.globalAlpha=0.08; ctx.strokeStyle='#0bd7'; ctx.beginPath();
+    for(let x=gx;x<canvas.width;x+=s){ ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); }
+    for(let y=gy;y<canvas.height;y+=s){ ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); }
+    ctx.stroke(); ctx.globalAlpha=1;
+
+    const viewX = Math.floor(camX - canvas.width/(2*DPR));
+    const viewY = Math.floor(camY - canvas.height/(2*DPR));
+    ctx.save(); ctx.translate(-viewX,-viewY);
+
+    function glowRect(x,y,w,h,c,a){
+      ctx.globalAlpha=a; ctx.fillStyle=c; ctx.fillRect(x,y,w,h);
+      const g=ctx.createRadialGradient(x+w/2,y+h/2, Math.min(w,h)/4, x+w/2,y+h/2, Math.max(w,h));
+      g.addColorStop(0, c+'cc'); g.addColorStop(1, c+'00');
+      ctx.fillStyle=g; ctx.fillRect(x-h, y-h, w+2*h, h+2*h); ctx.globalAlpha=1;
+    }
+    function drawSlope(s,c){
+      const steps=10;
+      for(let i=0;i<steps;i++){ const t0=i/steps, t1=(i+1)/steps;
+        const x0=s.x1+(s.x2-s.x1)*t0, y0=s.y1+(s.y2-s.y1)*t0;
+        const x1=s.x1+(s.x2-s.x1)*t1, y1=s.y1+(s.y2-s.y1)*t1;
+        glowRect(x0, Math.min(y0,y1)-6, (x1-x0), 6, c, 1); }
+    }
+
+    // Pads
+    for(const p of L.pads){ if(p.t==='rect') glowRect(p.x,p.y,p.w,p.h,'#39d2ff',1); else drawSlope(p,'#39d2ff'); }
+
+    // Hazards
+    for(const h of L.hz){
+      if(h.t==='spike'){
+        // simple triangular spikes
+        ctx.fillStyle = '#39d2ff';
+        const baseY=h.y, triW = h.w/3;
+        for(let i=0;i<3;i++){
+          const x0=h.x + i*triW, x1=x0+triW/2, x2=x0+triW;
+          ctx.beginPath(); ctx.moveTo(x0, baseY); ctx.lineTo(x2, baseY); ctx.lineTo(x1, baseY - h.h); ctx.closePath(); ctx.fill();
+        }
+      } else if(h.t==='laser'){
+        const ox = (h.axis==='x') ? (h.offset||0) : 0;
+        const oy = (h.axis==='y') ? (h.offset||0) : 0;
+        glowRect(h.x+ox, h.y+oy, h.w, h.h, '#ff6fa6', 0.9);
+      }
+    }
+
+    // Enemies
+    for(const e of L.en){ glowRect(e.x, e.y, e.w, e.h, '#ffe066', 0.95); }
+
+    // Goal
+    const g=L.goal; const t = performance.now()/1000;
+    const cx=g.x + g.w/2, cy=g.y + g.h/2;
+    glowRect(g.x, g.y, g.w, g.h, '#9ffff0', 1.0);
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(t*0.9);
+    const ringR = 56 + 12*Math.sin(t*3.2);
+    ctx.globalAlpha = 0.95; ctx.strokeStyle = '#c9fff7'; ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.arc(0,0, ringR, 0, Math.PI*2); ctx.stroke();
+    ctx.restore();
+    const beamW = 14 + 6*Math.sin(t*5.0);
+    glowRect(cx - beamW/2, cy - 260, beamW, 520, '#c9fff7', 0.42);
+
+    // Trail visual
+    for (const tr of trail){
+      const a = 1 - Math.min(1, tr.age/140);
+      glowRect(tr.x, tr.y, 34, 38, '#ff6fa6', 0.35*a + 0.18);
+    }
+
+    // Player
+    glowRect(player.x, player.y, player.w, player.h, dashCooldown>0 ? '#ff6fa6' : '#7fffd4', 1);
+
+    // Screen flash
+    if(screenFlash>0){
+      const a = Math.min(0.45, screenFlash/140*0.45);
+      ctx.setTransform(1,0,0,1,0,0);
+      ctx.globalAlpha=a; ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.globalAlpha=1; screenFlash -= (1000/60);
+    }
+
+    ctx.restore();
+  }
+
+  requestAnimationFrame(step);
+})();
 </script>
 </body>
 </html>
