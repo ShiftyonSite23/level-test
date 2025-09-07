@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neon Realms – Level 4 Test</title>
+  <style>
+    html, body { height:100%; margin:0; background:#000; overflow:hidden; }
+    canvas { display:block; margin:0 auto; background:#111; }
+    #hud { position:fixed; top:10px; left:10px; color:#0ff; font-family:monospace; font-size:14px; }
+    button { position:fixed; bottom:10px; width:80px; height:60px; font-size:14px; border-radius:8px; background:#111; color:#0ff; border:1px solid #0ff; }
+    #left { left:10px; }
+    #right { left:100px; }
+    #jump { right:100px; }
+    #dash { right:10px; }
+  </style>
+</head>
+<body>
+  <canvas id="game" width="800" height="480"></canvas>
+  <div id="hud">Level: <span id="levelDisp">1</span>/4</div>
+  <button id="left">LEFT</button>
+  <button id="right">RIGHT</button>
+  <button id="jump">JUMP</button>
+  <button id="dash">DASH</button>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let player = {x:50, y:400, w:30, h:30, vx:0, vy:0, onGround:false, dashReady:true};
+let keys = {left:false,right:false,jump:false,dash:false};
+let gravity = 0.8, jumpStrength = 15, moveSpeed=5, dashSpeed=14;
+let currentLevel = 0;
+
+const levels = [
+  // Level 1 simple floor
+  {pads:[{x:0,y:440,w:800,h:40}], goal:{x:700,y:400,w:40,h:40}},
+  // Level 2 gap
+  {pads:[{x:0,y:440,w:300,h:40},{x:400,y:440,w:400,h:40}], goal:{x:700,y:400,w:40,h:40}},
+  // Level 3 floating block
+  {pads:[{x:0,y:440,w:800,h:40},{x:350,y:360,w:100,h:20}], goal:{x:700,y:320,w:40,h:40}},
+  // Level 4 test template
+  {pads:[
+      {x:0,y:440,w:200,h:40},          // start platform
+      {x:250,y:400,w:120,h:20},        // small ledge
+      {x:420,y:360,w:140,h:20},        // higher ledge
+      {x:600,y:440,w:200,h:40}         // flat ground near goal
+    ],
+   goal:{x:730,y:400,w:40,h:40}}
+];
+
+function resetPlayer(){
+  player.x = 50; player.y=200; player.vx=0; player.vy=0; player.onGround=false; player.dashReady=true;
+}
+resetPlayer();
+
+function update(){
+  // Input
+  if(keys.left) player.vx = -moveSpeed;
+  else if(keys.right) player.vx = moveSpeed;
+  else player.vx = 0;
+
+  if(keys.jump && player.onGround){
+    player.vy = -jumpStrength;
+    player.onGround = false;
+  }
+
+  if(keys.dash && player.dashReady){
+    player.vx = (keys.right?1:keys.left?-1:1)*dashSpeed;
+    player.dashReady = false;
+  }
+
+  // Gravity
+  player.vy += gravity;
+  player.y += player.vy;
+  player.x += player.vx;
+
+  // Collisions
+  player.onGround = false;
+  for(const p of levels[currentLevel].pads){
+    if(player.x < p.x+p.w && player.x+player.w > p.x &&
+       player.y < p.y+p.h && player.y+player.h > p.y){
+      if(player.vy>0){ // landing
+        player.y = p.y-player.h;
+        player.vy = 0;
+        player.onGround = true;
+        player.dashReady = true;
+      }
+    }
+  }
+
+  // Goal check
+  const g = levels[currentLevel].goal;
+  if(player.x < g.x+g.w && player.x+player.w > g.x &&
+     player.y < g.y+g.h && player.y+player.h > g.y){
+    currentLevel++;
+    if(currentLevel>=levels.length){ currentLevel=0; }
+    resetPlayer();
+    document.getElementById("levelDisp").textContent = currentLevel+1;
+  }
+}
+
+function draw(){
+  ctx.fillStyle="#000"; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle="#0ff";
+  for(const p of levels[currentLevel].pads){ ctx.fillRect(p.x,p.y,p.w,p.h); }
+  ctx.fillStyle="#f0f"; const g = levels[currentLevel].goal; ctx.fillRect(g.x,g.y,g.w,g.h);
+  ctx.fillStyle="#0f0"; ctx.fillRect(player.x,player.y,player.w,player.h);
+}
+
+function loop(){
+  update(); draw();
+  requestAnimationFrame(loop);
+}
+loop();
+
+// Mobile controls
+document.getElementById("left").onmousedown=()=>keys.left=true;
+document.getElementById("left").onmouseup=()=>keys.left=false;
+document.getElementById("right").onmousedown=()=>keys.right=true;
+document.getElementById("right").onmouseup=()=>keys.right=false;
+document.getElementById("jump").onmousedown=()=>keys.jump=true;
+document.getElementById("jump").onmouseup=()=>keys.jump=false;
+document.getElementById("dash").onmousedown=()=>keys.dash=true;
+document.getElementById("dash").onmouseup=()=>keys.dash=false;
+
+// Touch (for mobile phones)
+document.getElementById("left").ontouchstart=()=>keys.left=true;
+document.getElementById("left").ontouchend=()=>keys.left=false;
+document.getElementById("right").ontouchstart=()=>keys.right=true;
+document.getElementById("right").ontouchend=()=>keys.right=false;
+document.getElementById("jump").ontouchstart=()=>keys.jump=true;
+document.getElementById("jump").ontouchend=()=>keys.jump=false;
+document.getElementById("dash").ontouchstart=()=>keys.dash=true;
+document.getElementById("dash").ontouchend=()=>keys.dash=false;
+</script>
+</body>
+</html>
