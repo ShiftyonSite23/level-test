@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover" />
-<title>Neon Realms — Levels 1–5</title>
+<title>Neon Realms — Levels 1–9</title>
 <style>
   html,body{height:100%;margin:0;background:#0a0a12;color:#e8f0ff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;overflow:hidden}
   canvas{display:block;width:100vw;height:100vh;touch-action:none}
@@ -41,7 +41,7 @@
 <canvas id="game"></canvas>
 
 <div id="hud">
-  <div class="row"><span id="levelLbl">Level 1/5</span><span id="dashLbl">Dash: READY</span></div>
+  <div class="row"><span id="levelLbl">Level 1/9</span><span id="dashLbl">Dash: READY</span></div>
   <div class="row"><span id="deathLbl">Deaths: 0</span><span id="timerLbl">Time: 0.00</span></div>
 </div>
 
@@ -198,8 +198,8 @@
     // Hazards (keep old + add more)
     hz.push(spike(860, groundY, 320, 44));                                   // wider pit under mover #1
     hz.push(laser(1660, groundY-230, 18, 240, 'y', 120, 1.35));              // vertical sweep near mover #2
-    hz.push(laser(1960, groundY-60, 280, 16, 'x', 150, 1.25));               // NEW: horizontal sweep after mover #2
-    hz.push(spike(2460, groundY, 120, 44));                                  // NEW: extra spike strip by slope
+    hz.push(laser(1960, groundY-60, 280, 16, 'x', 150, 1.25));               // horizontal sweep after mover #2
+    hz.push(spike(2460, groundY, 120, 44));                                  // extra spike by slope
 
     // Moving platforms (faster, shorter pause)
     const plats=[];
@@ -208,14 +208,109 @@
 
     // Enemies
     en.push(drone(1880, groundY-170, 1820, 2060, 155));                      // faster drone
-    en.push(hover(2100, groundY-260, groundY-320, groundY-160, 70));         // NEW hover patrol
+    en.push(hover(2100, groundY-260, groundY-320, groundY-160, 70));         // hover patrol
 
     // Goal & scroll length
     const g = goal(2560, groundY-120);
     return { pads, hz, en, goal: g, length: 2700, plats };
   }
 
-  const LEVELS=[buildLevel1(),buildLevel2(),buildLevel3(),buildLevel4(),buildLevel5()];
+  // ===== Level 6 — "Rhythm Rails" =====
+  function buildLevel6(){
+    const pads=[], hz=[], en=[], plats=[];
+    pads.push(rect(40, groundY, 520, 30));
+    pads.push(rect(1900, groundY, 600, 30));
+    pads.push(rect(980, groundY-140, 220, 18));
+    pads.push(rect(1380, groundY-160, 220, 18));
+    pads.push(slope(1580, groundY-160, 1720, groundY-40));
+    hz.push(spike(720, groundY, 240, 44));
+    hz.push(laser(1160, groundY-230, 18, 240, 'y', 110, 1.45));
+    hz.push(spike(1260, groundY, 200, 44));
+    hz.push(laser(1500, groundY-60, 260, 16, 'x', 140, 1.25));
+    plats.push(mplat(640, groundY-94, 170, 20, 'x', 580, 1060, 150, 0.10));
+    plats.push(mplat(1180, groundY-170, 160, 20, 'x', 1120, 1540, 155, 0.10));
+    en.push(drone(1660, groundY-150, 1600, 1860, 165));
+    en.push(hover(1760, groundY-260, groundY-320, groundY-160, 75));
+    const g = goal(2080, groundY-120);
+    return {pads, hz, en, goal: g, length: 2100, plats};
+  }
+
+  // ===== Level 7 — "Switchback Ramps" =====
+  function buildLevel7(){
+    const pads=[], hz=[], en=[], plats=[];
+    pads.push(rect(40, groundY, 540, 30));
+    pads.push(rect(2300, groundY, 640, 30));
+    pads.push(slope(720, groundY+20, 940, groundY-150));
+    pads.push(rect(1020, groundY-160, 210, 18));
+    pads.push(slope(1240, groundY-150, 1460, groundY+10));
+    pads.push(rect(1600, groundY-180, 210, 18));
+    pads.push(rect(1840, groundY-260, 200, 18));
+    hz.push(laser(1100, groundY-240, 18, 240, 'y', 120, 1.35));
+    hz.push(laser(1140, groundY-240, 18, 240, 'y', 120, 1.55));
+    hz.push(laser(1500, groundY-70, 300, 16, 'x', 160, 1.15));
+    hz.push(spike(1960, groundY, 160, 44));
+    plats.push(mplat(1760, groundY-300, 160, 20, 'y', groundY-320, groundY-120, 120, 0.12));
+    en.push(drone(1360, groundY-170, 1300, 1540, 170));
+    en.push(hover(2050, groundY-240, groundY-300, groundY-140, 78));
+    const g = goal(2460, groundY-120);
+    return {pads, hz, en, goal: g, length: 2460, plats};
+  }
+
+  // ===== Level 8 — "Triple Threat" =====
+  function buildLevel8(){
+    const pads=[], hz=[], en=[], plats=[];
+    pads.push(rect(40, groundY, 560, 30));
+    pads.push(rect(2800, groundY, 700, 30));
+    pads.push(rect(980, groundY-150, 200, 18));
+    pads.push(rect(1560, groundY-210, 210, 18));
+    pads.push(rect(2180, groundY-240, 210, 18));
+    pads.push(slope(2380, groundY-240, 2520, groundY-80));
+    hz.push(spike(700, groundY, 260, 44));
+    hz.push(laser(1180, groundY-230, 18, 230, 'y', 120, 1.55));
+    hz.push(laser(1380, groundY-60, 300, 16, 'x', 170, 1.30));
+    hz.push(laser(2000, groundY-230, 18, 260, 'y', 140, 1.45));
+    hz.push(spike(2560, groundY, 160, 44));
+    plats.push(mplat(620,  groundY-96, 170, 20, 'x', 580, 1040, 155, 0.08));
+    plats.push(mplat(1420, groundY-260, 150, 20, 'y', groundY-320, groundY-140, 130, 0.10));
+    plats.push(mplat(1800, groundY-210, 170, 20, 'x', 1740, 2180, 165, 0.08));
+    en.push(drone(1620, groundY-190, 1560, 1860, 175));
+    en.push(hover(2260, groundY-260, groundY-320, groundY-160, 80));
+    const g = goal(2960, groundY-120);
+    return {pads, hz, en, goal: g, length: 3000, plats};
+  }
+
+  // ===== Level 9 — "Long Run" =====
+  function buildLevel9(){
+    const pads=[], hz=[], en=[], plats=[];
+    pads.push(rect(40, groundY, 580, 30));
+    pads.push(rect(3300, groundY, 760, 30));
+    // A: speed board + spike channel
+    pads.push(rect(820, groundY-120, 220, 18));
+    hz.push(spike(1040, groundY, 220, 44));
+    plats.push(mplat(960, groundY-92, 170, 20, 'x', 900, 1260, 170, 0.08));
+    // B: vertical gate + elevator shaft
+    hz.push(laser(1320, groundY-230, 18, 240, 'y', 120, 1.50));
+    hz.push(laser(1360, groundY-230, 18, 240, 'y', 120, 1.65));
+    plats.push(mplat(1480, groundY-300, 160, 20, 'y', groundY-330, groundY-120, 135, 0.10));
+    pads.push(rect(1660, groundY-240, 210, 18));
+    // C: horizontal curtains + switchbacks
+    hz.push(laser(1820, groundY-70, 320, 16, 'x', 170, 1.22));
+    pads.push(slope(1980, groundY-220, 2140, groundY-60));
+    hz.push(laser(2200, groundY-60, 280, 16, 'x', 160, 1.28));
+    pads.push(rect(2360, groundY-200, 210, 18));
+    // D: finale mover over spikes + enemies
+    hz.push(spike(2520, groundY, 220, 44));
+    plats.push(mplat(2460, groundY-100, 170, 20, 'x', 2420, 2820, 175, 0.08));
+    en.push(drone(2080, groundY-170, 2020, 2320, 180));
+    en.push(hover(2700, groundY-260, groundY-320, groundY-160, 82));
+    const g = goal(3460, groundY-120);
+    return {pads, hz, en, goal: g, length: 3460, plats};
+  }
+
+  const LEVELS=[
+    buildLevel1(),buildLevel2(),buildLevel3(),buildLevel4(),
+    buildLevel5(),buildLevel6(),buildLevel7(),buildLevel8(),buildLevel9()
+  ];
   let levelIndex=0; const currentL=()=>LEVELS[levelIndex];
 
   // ===== Player / Physics =====
@@ -223,9 +318,9 @@
   const MOVE=360,G=2200,JUMP=780; let coyote=0;
   const DASH_SPEED=1700,DASH_COOLDOWN=0.85, DJ_MIN=0.06, DJ_MAX=0.30, DJ_BOOST=300;
   let dashCooldown=0,dashStartMs=-1,djDone=false;
-  const trail=[]; let screenFlash=0;
+  let camX=0,camY=groundY-120,lookAhead=0,last=performance.now();
+  const LOOK_BASE=140,LOOK_SPEED_FACTOR=0.35,LOOK_AIR_BONUS=80,LOOK_SMOOTH=7.0;
 
-  // (optional particles kept light)
   function tryDash(dir){
     if(dashCooldown>0) return;
     player.vx=dir*DASH_SPEED;
@@ -237,14 +332,9 @@
   let run={deaths:0,timeStart:performance.now()};
   function respawn(start=false,death=false){
     player.x=120;player.y=420;player.vx=0;player.vy=0;player.onGround=false;coyote=0;
-    if(death){run.deaths++;deathLbl.textContent='Deaths: '+run.deaths;screenFlash=140;}
+    if(death){run.deaths++;deathLbl.textContent='Deaths: '+run.deaths;}
     if(start){camX=player.x;camY=groundY-120;}
   }
-
-  // Camera
-  let camX=0,camY=groundY-120,lookAhead=0,last=performance.now();
-  const LOOK_BASE=140,LOOK_SPEED_FACTOR=0.35,LOOK_AIR_BONUS=80,LOOK_SMOOTH=7.0;
-
   function startLevel(i){
     levelIndex=Math.max(0,Math.min(LEVELS.length-1,i));
     levelLbl.textContent=`Level ${levelIndex+1}/${LEVELS.length}`;
@@ -357,13 +447,13 @@
 
     // Camera
     const viewW=canvas.width/DPR;
-    const baseLA=LOOK_BASE+Math.abs(player.vx)*LOOK_SPEED_FACTOR+(player.onGround?0:LOOK_AIR_BONUS);
+    const baseLA=140+Math.abs(player.vx)*0.35+(player.onGround?0:80);
     const maxLA=(player.onGround?viewW*0.28:viewW*0.34);
     let targetLA=baseLA*(player.facing>=0?1:-1);
     targetLA=Math.max(-maxLA,Math.min(maxLA,targetLA));
-    lookAhead+=(targetLA-lookAhead)*Math.min(1,dt*LOOK_SMOOTH);
-    camX+=((player.x+lookAhead)-camX)*Math.min(1,dt*LOOK_SMOOTH);
-    camY+=((player.y-80)-camY)*Math.min(1,dt*LOOK_SMOOTH);
+    lookAhead+=(targetLA-lookAhead)*Math.min(1,dt*7);
+    camX+=((player.x+lookAhead)-camX)*Math.min(1,dt*7);
+    camY+=((player.y-80)-camY)*Math.min(1,dt*7);
 
     render(L);
     requestAnimationFrame(step);
@@ -424,11 +514,6 @@
     // player
     glowRect(player.x,player.y,player.w,player.h, dashCooldown>0?'#ff6fa6':'#7fffd4',1);
 
-    if(screenFlash>0){
-      const a=Math.min(.45,screenFlash/140*.45);
-      ctx.setTransform(1,0,0,1,0,0); ctx.globalAlpha=a; ctx.fillStyle='#fff';
-      ctx.fillRect(0,0,canvas.width,canvas.height); ctx.globalAlpha=1; screenFlash-=1000/60;
-    }
     ctx.restore();
   }
 
