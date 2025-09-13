@@ -3,26 +3,18 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover" />
-<title>Neon Realms — Levels 1–9</title>
+<title>Neon Realms — Levels 1–10</title>
 <style>
   html,body{height:100%;margin:0;background:#0a0a12;color:#e8f0ff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;overflow:hidden}
   canvas{display:block;width:100vw;height:100vh;touch-action:none}
-
   /* HUD */
   #hud{position:fixed;left:8px;top:8px;z-index:11;background:#101022;border:1px solid #2b2b64;border-radius:10px;padding:8px 10px;font-size:12px;opacity:.96;min-width:220px}
   #hud .row{display:flex;justify-content:space-between;gap:10px;align-items:center}
-
   /* Touch buttons — ALL 80×80 */
   #buttons{position:fixed;left:12px;bottom:16px;display:flex;gap:10px;z-index:10}
-  .btn, #dashBtn{
-    width:80px;height:80px;
-    border-radius:16px;border:1px solid #2b2b64;
-    background:radial-gradient(100% 100% at 50% 0%,#1a1a36 0%,#0e0e1f 100%);
-    color:#bfe2ff;font-weight:800;font-size:12px;
-  }
+  .btn,#dashBtn{width:80px;height:80px;border-radius:16px;border:1px solid #2b2b64;background:radial-gradient(100% 100% at 50% 0%,#1a1a36 0%,#0e0e1f 100%);color:#bfe2ff;font-weight:800;font-size:12px}
   #dashBtn{position:fixed;right:12px;bottom:88px;z-index:10}
   #jumpBtn{position:fixed;right:12px;bottom:16px}
-
   /* Overlay */
   #overlay{position:fixed;inset:0;display:none;z-index:20;align-items:center;justify-content:center;background:rgba(8,8,16,.55)}
   #overlay .card{background:#0d0d1fdd;border:1px solid #63d7ff;color:#e8f0ff;padding:16px 22px;border-radius:14px;text-align:center;min-width:320px}
@@ -30,18 +22,14 @@
   #overlay p{margin:6px 0;font-size:14px;color:#bfe2ff}
   #overlay .score{font-size:28px;margin-top:8px}
   #overlay .btnbar{margin-top:12px;display:flex;gap:10px;justify-content:center}
-  #overlay button{
-    width:80px;height:80px;border-radius:16px;border:1px solid #2b2b64;
-    background:radial-gradient(100% 100% at 50% 0%,#1a1a36 0%,#0e0e1f 100%);
-    color:#bfe2ff;font-weight:800;font-size:12px;
-  }
+  #overlay button{width:80px;height:80px;border-radius:16px;border:1px solid #2b2b64;background:radial-gradient(100% 100% at 50% 0%,#1a1a36 0%,#0e0e1f 100%);color:#bfe2ff;font-weight:800;font-size:12px}
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
 
 <div id="hud">
-  <div class="row"><span id="levelLbl">Level 1/9</span><span id="dashLbl">Dash: READY</span></div>
+  <div class="row"><span id="levelLbl">Level 1/10</span><span id="dashLbl">Dash: READY</span></div>
   <div class="row"><span id="deathLbl">Deaths: 0</span><span id="timerLbl">Time: 0.00</span></div>
 </div>
 
@@ -121,195 +109,91 @@
   const hover=(x,y,minY,maxY,speed)=>({t:'hover',x,y,w:34,h:22,minY,maxY,dir:1,speed});
   const goal=(x,y)=>({t:'goal',x,y,w:36,h:120});
   const mplat=(x,y,w,h,axis,min,max,speed,pause=0.2)=>({t:'mplat',x,y,w,h,axis,min,max,speed,dir:1,pause,waiting:0,prevX:x,prevY:y});
+  // NEW: crumble platforms
+  const crumble=(x,y,w,h,breakDelay=0.5,resetAfter=2.5)=>({t:'crumble',x,y,w,h,breakDelay,resetAfter,active:true,timer:0,resetting:0,stepping:false});
 
-  // ===== Levels 1–4 (same vibe) =====
-  function buildLevel1(){
-    const pads=[],hz=[],en=[];
-    let x=40; while(x<3600){const segW=420,gap=140;pads.push(rect(x,groundY,segW,30));x+=segW+gap;}
-    pads.push(slope(900,groundY+30,1080,groundY-140));
-    pads.push(rect(1400,groundY-110,220,18));
-    pads.push(rect(1900,groundY-200,220,18));
-    hz.push(spike(1200,groundY,80,40));
-    hz.push(laser(2200,groundY-170,18,170,'y',80,1.1));
-    en.push(drone(1650,groundY-140,1600,1850,120));
-    return {pads,hz,en,goal:goal(3300,groundY-120),length:3600,plats:[]};
-  }
-  function buildLevel2(){
-    const pads=[],hz=[],en=[];
-    let x=40; while(x<4200){const segW=360,gap=160;pads.push(rect(x,groundY,segW,30));x+=segW+gap;}
-    pads.push(slope(700,groundY+30,900,groundY-160));
-    pads.push(rect(1350,groundY-140,200,18));
-    pads.push(rect(1700,groundY-260,200,18));
-    pads.push(rect(2300,groundY-100,220,18));
-    hz.push(spike(1100,groundY,100,40));
-    hz.push(laser(2000,groundY-180,18,220,'y',120,1.5));
-    hz.push(laser(2600,groundY-40,220,16,'x',100,1.0));
-    en.push(drone(1500,groundY-170,1450,1750,150));
-    en.push(hover(2450,groundY-200,groundY-260,groundY-120,60));
-    return {pads,hz,en,goal:goal(3900,groundY-120),length:4200,plats:[]};
-  }
-  function buildLevel3(){
-    const pads=[],hz=[],en=[];
-    let x=40; while(x<4800){const segW=320,gap=180;pads.push(rect(x,groundY,segW,30));x+=segW+gap;}
-    pads.push(slope(900,groundY+30,1080,groundY-180));
-    pads.push(rect(1500,groundY-180,200,18));
-    pads.push(rect(1900,groundY-300,200,18));
-    pads.push(rect(2550,groundY-220,200,18));
-    hz.push(spike(1250,groundY,120,40));
-    hz.push(laser(2100,groundY-200,18,240,'y',140,1.6));
-    hz.push(laser(3000,groundY-60,260,16,'x',160,1.2));
-    hz.push(spike(3400,groundY,100,40));
-    en.push(drone(1700,groundY-210,1650,1950,170));
-    en.push(hover(2850,groundY-220,groundY-300,groundY-120,70));
-    en.push(drone(3300,groundY-30,3250,3550,140));
-    return {pads,hz,en,goal:goal(4500,groundY-120),length:4800,plats:[]};
-  }
-  function buildLevel4(){
-    const pads=[],hz=[],en=[];
-    let x=40; while(x<5200){const segW=340,gap=190;pads.push(rect(x,groundY,segW,30));x+=segW+gap;}
-    pads.push(slope(820,groundY+30,1040,groundY-160));
-    pads.push(rect(1320,groundY-140,200,18));
-    pads.push(slope(1600,groundY-160,1820,groundY+10));
-    pads.push(rect(2100,groundY-180,200,18));
-    pads.push(rect(2480,groundY-260,200,18));
-    pads.push(rect(2950,groundY-200,220,18));
-    pads.push(slope(3350,groundY-200,3600,groundY+10));
-    hz.push(spike(1200,groundY,100,40));
-    hz.push(laser(2200,groundY-200,18,220,'y',120,1.45));
-    hz.push(laser(3050,groundY-50,240,16,'x',120,1.1));
-    en.push(drone(1750,groundY-170,1700,1950,150));
-    en.push(drone(3400,groundY-120,3320,3580,160));
-    return {pads,hz,en,goal:goal(4900,groundY-120),length:5200,plats:[]};
-  }
+  // ===== Level builders (1–4) =====
+  function buildLevel1(){const pads=[],hz=[],en=[];let x=40;while(x<3600){const segW=420,gap=140;pads.push(rect(x,groundY,segW,30));x+=segW+gap;}pads.push(slope(900,groundY+30,1080,groundY-140));pads.push(rect(1400,groundY-110,220,18));pads.push(rect(1900,groundY-200,220,18));hz.push(spike(1200,groundY,80,40));hz.push(laser(2200,groundY-170,18,170,'y',80,1.1));en.push(drone(1650,groundY-140,1600,1850,120));return{pads,hz,en,goal:goal(3300,groundY-120),length:3600,plats:[]};}
+  function buildLevel2(){const pads=[],hz=[],en=[];let x=40;while(x<4200){const segW=360,gap=160;pads.push(rect(x,groundY,segW,30));x+=segW+gap;}pads.push(slope(700,groundY+30,900,groundY-160));pads.push(rect(1350,groundY-140,200,18));pads.push(rect(1700,groundY-260,200,18));pads.push(rect(2300,groundY-100,220,18));hz.push(spike(1100,groundY,100,40));hz.push(laser(2000,groundY-180,18,220,'y',120,1.5));hz.push(laser(2600,groundY-40,220,16,'x',100,1.0));en.push(drone(1500,groundY-170,1450,1750,150));en.push(hover(2450,groundY-200,groundY-260,groundY-120,60));return{pads,hz,en,goal:goal(3900,groundY-120),length:4200,plats:[]};}
+  function buildLevel3(){const pads=[],hz=[],en=[];let x=40;while(x<4800){const segW=320,gap=180;pads.push(rect(x,groundY,segW,30));x+=segW+gap;}pads.push(slope(900,groundY+30,1080,groundY-180));pads.push(rect(1500,groundY-180,200,18));pads.push(rect(1900,groundY-300,200,18));pads.push(rect(2550,groundY-220,200,18));hz.push(spike(1250,groundY,120,40));hz.push(laser(2100,groundY-200,18,240,'y',140,1.6));hz.push(laser(3000,groundY-60,260,16,'x',160,1.2));hz.push(spike(3400,groundY,100,40));en.push(drone(1700,groundY-210,1650,1950,170));en.push(hover(2850,groundY-220,groundY-300,groundY-120,70));en.push(drone(3300,groundY-30,3250,3550,140));return{pads,hz,en,goal:goal(4500,groundY-120),length:4800,plats:[]};}
+  function buildLevel4(){const pads=[],hz=[],en=[];let x=40;while(x<5200){const segW=340,gap=190;pads.push(rect(x,groundY,segW,30));x+=segW+gap;}pads.push(slope(820,groundY+30,1040,groundY-160));pads.push(rect(1320,groundY-140,200,18));pads.push(slope(1600,groundY-160,1820,groundY+10));pads.push(rect(2100,groundY-180,200,18));pads.push(rect(2480,groundY-260,200,18));pads.push(rect(2950,groundY-200,220,18));pads.push(slope(3350,groundY-200,3600,groundY+10));hz.push(spike(1200,groundY,100,40));hz.push(laser(2200,groundY-200,18,220,'y',120,1.45));hz.push(laser(3050,groundY-50,240,16,'x',120,1.1));en.push(drone(1750,groundY-170,1700,1950,150));en.push(drone(3400,groundY-120,3320,3580,160));return{pads,hz,en,goal:goal(4900,groundY-120),length:5200,plats:[]};}
 
-  // ===== Level 5 — Moving platforms + layered obstacles (faster pacing) =====
-  function buildLevel5(){
-    const pads=[], hz=[], en=[];
-    // Start/landing grounds
-    pads.push(rect(40, groundY, 520, 30));
-    pads.push(rect(1600, groundY, 560, 30)); // farther to fit added hazards
+  // ===== Level 5 (faster movers + layered hazards) =====
+  function buildLevel5(){const pads=[],hz=[],en=[];pads.push(rect(40,groundY,520,30));pads.push(rect(1600,groundY,560,30));
+    pads.push(rect(1150,groundY-140,220,18));pads.push(rect(1750,groundY-120,220,18));pads.push(rect(2040,groundY-220,220,18));pads.push(slope(2280,groundY-220,2440,groundY-70));
+    hz.push(spike(860,groundY,320,44));hz.push(laser(1660,groundY-230,18,240,'y',120,1.35));hz.push(laser(1960,groundY-60,280,16,'x',150,1.25));hz.push(spike(2460,groundY,120,44));
+    const plats=[];plats.push(mplat(780,groundY-90,170,20,'x',700,1320,140,0.12));plats.push(mplat(1620,groundY-188,150,20,'y',groundY-310,groundY-120,125,0.10));
+    en.push(drone(1880,groundY-170,1820,2060,155));en.push(hover(2100,groundY-260,groundY-320,groundY-160,70));
+    return{pads,hz,en,goal:goal(2560,groundY-120),length:2700,plats};}
 
-    // Mid ledges / structure
-    pads.push(rect(1150, groundY-140, 220, 18));      // dismount from mover #1
-    pads.push(rect(1750, groundY-120, 220, 18));      // staging before mover #2
-    pads.push(rect(2040, groundY-220, 220, 18));      // after mover #2 (higher)
-    pads.push(slope(2280, groundY-220, 2440, groundY-70)); // short slope toward goal
+  // ===== Level 6–9 (batch) =====
+  function buildLevel6(){const pads=[],hz=[],en=[],plats=[];pads.push(rect(40,groundY,520,30));pads.push(rect(1900,groundY,600,30));
+    pads.push(rect(980,groundY-140,220,18));pads.push(rect(1380,groundY-160,220,18));pads.push(slope(1580,groundY-160,1720,groundY-40));
+    hz.push(spike(720,groundY,240,44));hz.push(laser(1160,groundY-230,18,240,'y',110,1.45));hz.push(spike(1260,groundY,200,44));hz.push(laser(1500,groundY-60,260,16,'x',140,1.25));
+    plats.push(mplat(640,groundY-94,170,20,'x',580,1060,150,0.10));plats.push(mplat(1180,groundY-170,160,20,'x',1120,1540,155,0.10));
+    en.push(drone(1660,groundY-150,1600,1860,165));en.push(hover(1760,groundY-260,groundY-320,groundY-160,75));
+    return{pads,hz,en,goal:goal(2080,groundY-120),length:2100,plats};}
+  function buildLevel7(){const pads=[],hz=[],en=[],plats=[];pads.push(rect(40,groundY,540,30));pads.push(rect(2300,groundY,640,30));
+    pads.push(slope(720,groundY+20,940,groundY-150));pads.push(rect(1020,groundY-160,210,18));pads.push(slope(1240,groundY-150,1460,groundY+10));pads.push(rect(1600,groundY-180,210,18));pads.push(rect(1840,groundY-260,200,18));
+    hz.push(laser(1100,groundY-240,18,240,'y',120,1.35));hz.push(laser(1140,groundY-240,18,240,'y',120,1.55));hz.push(laser(1500,groundY-70,300,16,'x',160,1.15));hz.push(spike(1960,groundY,160,44));
+    plats.push(mplat(1760,groundY-300,160,20,'y',groundY-320,groundY-120,120,0.12));
+    en.push(drone(1360,groundY-170,1300,1540,170));en.push(hover(2050,groundY-240,groundY-300,groundY-140,78));
+    return{pads,hz,en,goal:goal(2460,groundY-120),length:2460,plats};}
+  function buildLevel8(){const pads=[],hz=[],en=[],plats=[];pads.push(rect(40,groundY,560,30));pads.push(rect(2800,groundY,700,30));
+    pads.push(rect(980,groundY-150,200,18));pads.push(rect(1560,groundY-210,210,18));pads.push(rect(2180,groundY-240,210,18));pads.push(slope(2380,groundY-240,2520,groundY-80));
+    hz.push(spike(700,groundY,260,44));hz.push(laser(1180,groundY-230,18,230,'y',120,1.55));hz.push(laser(1380,groundY-60,300,16,'x',170,1.30));hz.push(laser(2000,groundY-230,18,260,'y',140,1.45));hz.push(spike(2560,groundY,160,44));
+    plats.push(mplat(620,groundY-96,170,20,'x',580,1040,155,0.08));plats.push(mplat(1420,groundY-260,150,20,'y',groundY-320,groundY-140,130,0.10));plats.push(mplat(1800,groundY-210,170,20,'x',1740,2180,165,0.08));
+    en.push(drone(1620,groundY-190,1560,1860,175));en.push(hover(2260,groundY-260,groundY-320,groundY-160,80));
+    return{pads,hz,en,goal:goal(2960,groundY-120),length:3000,plats};}
+  function buildLevel9(){const pads=[],hz=[],en=[],plats=[];pads.push(rect(40,groundY,580,30));pads.push(rect(3300,groundY,760,30));
+    pads.push(rect(820,groundY-120,220,18));hz.push(spike(1040,groundY,220,44));plats.push(mplat(960,groundY-92,170,20,'x',900,1260,170,0.08));
+    hz.push(laser(1320,groundY-230,18,240,'y',120,1.50));hz.push(laser(1360,groundY-230,18,240,'y',120,1.65));plats.push(mplat(1480,groundY-300,160,20,'y',groundY-330,groundY-120,135,0.10));pads.push(rect(1660,groundY-240,210,18));
+    hz.push(laser(1820,groundY-70,320,16,'x',170,1.22));pads.push(slope(1980,groundY-220,2140,groundY-60));hz.push(laser(2200,groundY-60,280,16,'x',160,1.28));pads.push(rect(2360,groundY-200,210,18));
+    hz.push(spike(2520,groundY,220,44));plats.push(mplat(2460,groundY-100,170,20,'x',2420,2820,175,0.08));
+    en.push(drone(2080,groundY-170,2020,2320,180));en.push(hover(2700,groundY-260,groundY-320,groundY-160,82));
+    return{pads,hz,en,goal:goal(3460,groundY-120),length:3460,plats};}
 
-    // Hazards (keep old + add more)
-    hz.push(spike(860, groundY, 320, 44));                                   // wider pit under mover #1
-    hz.push(laser(1660, groundY-230, 18, 240, 'y', 120, 1.35));              // vertical sweep near mover #2
-    hz.push(laser(1960, groundY-60, 280, 16, 'x', 150, 1.25));               // horizontal sweep after mover #2
-    hz.push(spike(2460, groundY, 120, 44));                                  // extra spike by slope
-
-    // Moving platforms (faster, shorter pause)
-    const plats=[];
-    plats.push(mplat(780, groundY-90, 170, 20, 'x', 700, 1320, 140, 0.12));  // mover #1: fast horizontal
-    plats.push(mplat(1620, groundY-188, 150, 20, 'y', groundY-310, groundY-120, 125, 0.10)); // mover #2: faster vertical
-
-    // Enemies
-    en.push(drone(1880, groundY-170, 1820, 2060, 155));                      // faster drone
-    en.push(hover(2100, groundY-260, groundY-320, groundY-160, 70));         // hover patrol
-
-    // Goal & scroll length
-    const g = goal(2560, groundY-120);
-    return { pads, hz, en, goal: g, length: 2700, plats };
+  // ===== Level 10 — Crumble blocks intro ("Fragile Bridges") =====
+  function buildLevel10(){
+    const pads=[],hz=[],en=[],plats=[];
+    pads.push(rect(40,groundY,600,30));pads.push(rect(3800,groundY,760,30));
+    // A: crumble bridge over spikes
+    hz.push(spike(760,groundY,260,44));
+    pads.push(crumble(660,groundY-90,120,20,0.45,2.6));
+    pads.push(crumble(800,groundY-110,120,20,0.55,2.6));
+    pads.push(rect(980,groundY-140,200,18));
+    // B: twin vertical gates + elevator
+    hz.push(laser(1180,groundY-230,18,240,'y',120,1.55));
+    hz.push(laser(1220,groundY-230,18,240,'y',120,1.40));
+    plats.push(mplat(1320,groundY-200,150,20,'y',groundY-300,groundY-120,130,0.10));
+    pads.push(rect(1500,groundY-210,210,18));
+    // C: horizontal curtain + crumble chain
+    hz.push(laser(1680,groundY-70,320,16,'x',170,1.25));
+    pads.push(crumble(1600,groundY-120,110,20,0.5,2.8));
+    pads.push(crumble(1740,groundY-150,110,20,0.5,2.8));
+    pads.push(crumble(1880,groundY-180,110,20,0.5,2.8));
+    pads.push(rect(2020,groundY-210,210,18));
+    // D: mover over large spike bed, slope exit
+    hz.push(spike(2140,groundY,320,44));
+    plats.push(mplat(2100,groundY-100,170,20,'x',2060,2440,175,0.08));
+    pads.push(rect(2460,groundY-180,210,18));
+    pads.push(slope(2680,groundY-180,2860,groundY-20));
+    // E: finale mix
+    hz.push(laser(2920,groundY-60,300,16,'x',160,1.30));
+    pads.push(crumble(2860,groundY-130,120,20,0.55,2.5));
+    pads.push(rect(3020,groundY-180,200,18));
+    hz.push(laser(3220,groundY-230,18,260,'y',140,1.48));
+    pads.push(crumble(3280,groundY-200,120,20,0.45,2.4));
+    // enemies
+    en.push(drone(1800,groundY-170,1740,2060,175));
+    en.push(hover(2360,groundY-260,groundY-320,groundY-160,82));
+    return{pads,hz,en,goal:goal(3980,groundY-120),length:3980,plats};
   }
 
-  // ===== Level 6 — "Rhythm Rails" =====
-  function buildLevel6(){
-    const pads=[], hz=[], en=[], plats=[];
-    pads.push(rect(40, groundY, 520, 30));
-    pads.push(rect(1900, groundY, 600, 30));
-    pads.push(rect(980, groundY-140, 220, 18));
-    pads.push(rect(1380, groundY-160, 220, 18));
-    pads.push(slope(1580, groundY-160, 1720, groundY-40));
-    hz.push(spike(720, groundY, 240, 44));
-    hz.push(laser(1160, groundY-230, 18, 240, 'y', 110, 1.45));
-    hz.push(spike(1260, groundY, 200, 44));
-    hz.push(laser(1500, groundY-60, 260, 16, 'x', 140, 1.25));
-    plats.push(mplat(640, groundY-94, 170, 20, 'x', 580, 1060, 150, 0.10));
-    plats.push(mplat(1180, groundY-170, 160, 20, 'x', 1120, 1540, 155, 0.10));
-    en.push(drone(1660, groundY-150, 1600, 1860, 165));
-    en.push(hover(1760, groundY-260, groundY-320, groundY-160, 75));
-    const g = goal(2080, groundY-120);
-    return {pads, hz, en, goal: g, length: 2100, plats};
-  }
-
-  // ===== Level 7 — "Switchback Ramps" =====
-  function buildLevel7(){
-    const pads=[], hz=[], en=[], plats=[];
-    pads.push(rect(40, groundY, 540, 30));
-    pads.push(rect(2300, groundY, 640, 30));
-    pads.push(slope(720, groundY+20, 940, groundY-150));
-    pads.push(rect(1020, groundY-160, 210, 18));
-    pads.push(slope(1240, groundY-150, 1460, groundY+10));
-    pads.push(rect(1600, groundY-180, 210, 18));
-    pads.push(rect(1840, groundY-260, 200, 18));
-    hz.push(laser(1100, groundY-240, 18, 240, 'y', 120, 1.35));
-    hz.push(laser(1140, groundY-240, 18, 240, 'y', 120, 1.55));
-    hz.push(laser(1500, groundY-70, 300, 16, 'x', 160, 1.15));
-    hz.push(spike(1960, groundY, 160, 44));
-    plats.push(mplat(1760, groundY-300, 160, 20, 'y', groundY-320, groundY-120, 120, 0.12));
-    en.push(drone(1360, groundY-170, 1300, 1540, 170));
-    en.push(hover(2050, groundY-240, groundY-300, groundY-140, 78));
-    const g = goal(2460, groundY-120);
-    return {pads, hz, en, goal: g, length: 2460, plats};
-  }
-
-  // ===== Level 8 — "Triple Threat" =====
-  function buildLevel8(){
-    const pads=[], hz=[], en=[], plats=[];
-    pads.push(rect(40, groundY, 560, 30));
-    pads.push(rect(2800, groundY, 700, 30));
-    pads.push(rect(980, groundY-150, 200, 18));
-    pads.push(rect(1560, groundY-210, 210, 18));
-    pads.push(rect(2180, groundY-240, 210, 18));
-    pads.push(slope(2380, groundY-240, 2520, groundY-80));
-    hz.push(spike(700, groundY, 260, 44));
-    hz.push(laser(1180, groundY-230, 18, 230, 'y', 120, 1.55));
-    hz.push(laser(1380, groundY-60, 300, 16, 'x', 170, 1.30));
-    hz.push(laser(2000, groundY-230, 18, 260, 'y', 140, 1.45));
-    hz.push(spike(2560, groundY, 160, 44));
-    plats.push(mplat(620,  groundY-96, 170, 20, 'x', 580, 1040, 155, 0.08));
-    plats.push(mplat(1420, groundY-260, 150, 20, 'y', groundY-320, groundY-140, 130, 0.10));
-    plats.push(mplat(1800, groundY-210, 170, 20, 'x', 1740, 2180, 165, 0.08));
-    en.push(drone(1620, groundY-190, 1560, 1860, 175));
-    en.push(hover(2260, groundY-260, groundY-320, groundY-160, 80));
-    const g = goal(2960, groundY-120);
-    return {pads, hz, en, goal: g, length: 3000, plats};
-  }
-
-  // ===== Level 9 — "Long Run" =====
-  function buildLevel9(){
-    const pads=[], hz=[], en=[], plats=[];
-    pads.push(rect(40, groundY, 580, 30));
-    pads.push(rect(3300, groundY, 760, 30));
-    // A: speed board + spike channel
-    pads.push(rect(820, groundY-120, 220, 18));
-    hz.push(spike(1040, groundY, 220, 44));
-    plats.push(mplat(960, groundY-92, 170, 20, 'x', 900, 1260, 170, 0.08));
-    // B: vertical gate + elevator shaft
-    hz.push(laser(1320, groundY-230, 18, 240, 'y', 120, 1.50));
-    hz.push(laser(1360, groundY-230, 18, 240, 'y', 120, 1.65));
-    plats.push(mplat(1480, groundY-300, 160, 20, 'y', groundY-330, groundY-120, 135, 0.10));
-    pads.push(rect(1660, groundY-240, 210, 18));
-    // C: horizontal curtains + switchbacks
-    hz.push(laser(1820, groundY-70, 320, 16, 'x', 170, 1.22));
-    pads.push(slope(1980, groundY-220, 2140, groundY-60));
-    hz.push(laser(2200, groundY-60, 280, 16, 'x', 160, 1.28));
-    pads.push(rect(2360, groundY-200, 210, 18));
-    // D: finale mover over spikes + enemies
-    hz.push(spike(2520, groundY, 220, 44));
-    plats.push(mplat(2460, groundY-100, 170, 20, 'x', 2420, 2820, 175, 0.08));
-    en.push(drone(2080, groundY-170, 2020, 2320, 180));
-    en.push(hover(2700, groundY-260, groundY-320, groundY-160, 82));
-    const g = goal(3460, groundY-120);
-    return {pads, hz, en, goal: g, length: 3460, plats};
-  }
-
+  // ===== Level list =====
   const LEVELS=[
     buildLevel1(),buildLevel2(),buildLevel3(),buildLevel4(),
-    buildLevel5(),buildLevel6(),buildLevel7(),buildLevel8(),buildLevel9()
+    buildLevel5(),buildLevel6(),buildLevel7(),buildLevel8(),buildLevel9(),buildLevel10()
   ];
   let levelIndex=0; const currentL=()=>LEVELS[levelIndex];
 
@@ -319,15 +203,8 @@
   const DASH_SPEED=1700,DASH_COOLDOWN=0.85, DJ_MIN=0.06, DJ_MAX=0.30, DJ_BOOST=300;
   let dashCooldown=0,dashStartMs=-1,djDone=false;
   let camX=0,camY=groundY-120,lookAhead=0,last=performance.now();
-  const LOOK_BASE=140,LOOK_SPEED_FACTOR=0.35,LOOK_AIR_BONUS=80,LOOK_SMOOTH=7.0;
 
-  function tryDash(dir){
-    if(dashCooldown>0) return;
-    player.vx=dir*DASH_SPEED;
-    dashCooldown=DASH_COOLDOWN;
-    dashStartMs=performance.now();
-    djDone=false;
-  }
+  function tryDash(dir){ if(dashCooldown>0)return; player.vx=dir*DASH_SPEED; dashCooldown=DASH_COOLDOWN; dashStartMs=performance.now(); djDone=false; }
 
   let run={deaths:0,timeStart:performance.now()};
   function respawn(start=false,death=false){
@@ -344,7 +221,7 @@
   }
   startLevel(0);
 
-  // Updates
+  // ===== Updaters =====
   function updateHazards(dt,hz){for(const h of hz){if(h.t==='laser'){const t=performance.now()/1000+(h.phase||0);h.offset=Math.sin(t*h.speed)*h.amp;}}}
   function updateEnemies(dt,en){
     for(const e of en){
@@ -360,10 +237,29 @@
       else{p.y+=p.dir*p.speed*dt; if(p.y<p.min){p.y=p.min;p.dir=1;p.waiting=p.pause;} if(p.y>p.max){p.y=p.max;p.dir=-1;p.waiting=p.pause;}}
     }
   }
+  // NEW: crumble update
+  function updateCrumbles(dt,pads,player){
+    for(const p of pads){if(p.t==='crumble') p.stepping=false;}
+    const meFeet={x:player.x,y:player.y+player.h-1,w:player.w,h:2};
+    const ov=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+    for(const c of pads){
+      if(c.t!=='crumble'||!c.active)continue;
+      const top={x:c.x,y:c.y-2,w:c.w,h:6};
+      if(ov(meFeet,top)&&player.vy>=0) c.stepping=true;
+    }
+    for(const c of pads){
+      if(c.t!=='crumble')continue;
+      if(c.active){
+        if(c.stepping){ c.timer+=dt; if(c.timer>=c.breakDelay){ c.active=false; c.timer=0; c.resetting=c.resetAfter; } }
+        else{ c.timer=Math.max(0,c.timer-dt*0.5); }
+      }else{
+        c.resetting-=dt; if(c.resetting<=0){ c.active=true; c.resetting=0; c.timer=0; }
+      }
+    }
+  }
 
   function step(now){
     const dt=Math.min(0.033,(now-last)/1000); last=now;
-
     // HUD
     timerLbl.textContent='Time: '+((now-run.timeStart)/1000).toFixed(2);
     dashCooldown=Math.max(0,dashCooldown-dt);
@@ -376,56 +272,59 @@
     if(jumpEdge&&(player.onGround||coyote>0)){player.vy=-JUMP;coyote=0;} jumpEdge=false;
 
     // Dash-jump boost
-    const djDelta=(lastJumpTapMs>0 && dashStartMs>0)?(lastJumpTapMs-dashStartMs):-1e9;
+    const djDelta=(lastJumpTapMs>0&&dashStartMs>0)?(lastJumpTapMs-dashStartMs):-1e9;
     if(!djDone && djDelta>=DJ_MIN*1000 && djDelta<=DJ_MAX*1000){ player.vy=Math.min(player.vy,0)-DJ_BOOST; djDone=true; }
 
     const L=currentL();
-    updateHazards(dt,L.hz); updateEnemies(dt,L.en); updatePlats(dt,L.plats||[]);
+    updateHazards(dt,L.hz); updateEnemies(dt,L.en); updatePlats(dt,L.plats||[]); updateCrumbles(dt,L.pads||[],player);
 
     // Integrate
     let nx=player.x+player.vx*dt, ny=player.y+player.vy*dt;
 
-    // Collide Y with rects
+    // Collide Y with solid pads (rects + active crumbles)
     let grounded=false; const boxY={x:nx,y:ny,w:player.w,h:player.h};
-    for(const p of L.pads){ if(p.t!=='rect') continue;
-      if(!(boxY.x<p.x+p.w && boxY.x+boxY.w>p.x && boxY.y<p.y+p.h && boxY.y+boxY.h>p.y)) continue;
-      if(player.vy>0){ ny=p.y-player.h; player.vy=0; grounded=true; } else if(player.vy<0){ ny=p.y+p.h; player.vy=0; }
+    for(const p of L.pads){
+      const solid=(p.t==='rect')||(p.t==='crumble'&&p.active);
+      if(!solid)continue;
+      if(!(boxY.x<p.x+p.w&&boxY.x+boxY.w>p.x&&boxY.y<p.y+p.h&&boxY.y+boxY.h>p.y))continue;
+      if(player.vy>0){ ny=p.y-player.h; player.vy=0; grounded=true; }
+      else if(player.vy<0){ ny=p.y+p.h; player.vy=0; }
       boxY.y=ny;
     }
-    // Slopes as ground
+    // Slopes
     const feetX=nx+player.w*0.5;
-    for(const s of L.pads){ if(s.t!=='slope') continue; if(feetX<s.minX||feetX>s.maxX) continue;
-      const yS=slopeYAt(s,feetX); if(ny+player.h>=yS-0.5 && player.vy>=0){ ny=yS-player.h; player.vy=0; grounded=true; } }
+    for(const s of L.pads){ if(s.t!=='slope')continue; if(feetX<s.minX||feetX>s.maxX)continue;
+      const yS=slopeYAt(s,feetX); if(ny+player.h>=yS-0.5&&player.vy>=0){ ny=yS-player.h; player.vy=0; grounded=true; } }
 
     // Moving platforms (stand/carry + resolve)
     for(const m of (L.plats||[])){
       const top={x:m.x,y:m.y-2,w:m.w,h:6}, pxTop={x:nx,y:ny+player.h-2,w:player.w,h:4};
-      const overTop=(pxTop.x<top.x+top.w && pxTop.x+pxTop.w>top.x && pxTop.y<top.y+top.h && pxTop.y+pxTop.h>top.y);
-      if(overTop && player.vy>=0){ ny=m.y-player.h; player.vy=0; grounded=true; nx+=(m.x-m.prevX); ny+=(m.y-m.prevY); }
+      const overTop=(pxTop.x<top.x+top.w&&pxTop.x+pxTop.w>top.x&&pxTop.y<top.y+top.h&&pxTop.y+pxTop.h>top.y);
+      if(overTop&&player.vy>=0){ ny=m.y-player.h; player.vy=0; grounded=true; nx+=(m.x-m.prevX); ny+=(m.y-m.prevY); }
       const pb={x:m.x,y:m.y,w:m.w,h:m.h}, me={x:nx,y:ny,w:player.w,h:player.h};
       const ov=!(me.x>pb.x+pb.w||me.x+me.w<pb.x||me.y>pb.y+pb.h||me.y+me.h<pb.y);
-      if(ov){ const dxL=me.x+me.w-pb.x, dxR=pb.x+pb.w-me.x, dyT=me.y+me.h-pb.y, dyB=pb.y+pb.h-me.y;
-        if(Math.min(dxL,dxR)<Math.min(dyT,dyB)){ if(dxL<dxR) nx-=dxL; else nx+=dxR; player.vx=0; }
-        else { if(dyT<dyB){ ny-=dyT; player.vy=0; grounded=true; } else { ny+=dyB; player.vy=0; } } }
+      if(ov){ const dxL=me.x+me.w-pb.x,dxR=pb.x+pb.w-me.x,dyT=me.y+me.h-pb.y,dyB=pb.y+pb.h-me.y;
+        if(Math.min(dxL,dxR)<Math.min(dyT,dyB)){ if(dxL<dxR)nx-=dxL; else nx+=dxR; player.vx=0; }
+        else{ if(dyT<dyB){ ny-=dyT; player.vy=0; grounded=true; } else { ny+=dyB; player.vy=0; } } }
     }
 
-    // Collide X with rects
+    // Collide X with rects only (crumble sides are forgiving)
     const boxX={x:nx,y:ny,w:player.w,h:player.h};
-    for(const p of L.pads){ if(p.t!=='rect') continue;
-      if(!(boxX.x<p.x+p.w && boxX.x+boxX.w>p.x && boxX.y<p.y+p.h && boxX.y+p.h>p.y)) continue;
+    for(const p of L.pads){ if(p.t!=='rect')continue;
+      if(!(boxX.x<p.x+p.w&&boxX.x+boxX.w>p.x&&boxX.y<p.y+p.h&&boxX.y+p.h>p.y))continue;
       if(player.vx>0){ nx=p.x-player.w; player.vx=0; } else if(player.vx<0){ nx=p.x+p.w; player.vx=0; }
       boxX.x=nx;
     }
 
     player.x=nx; player.y=ny; player.onGround=grounded;
 
-    // Hazards / enemies
+    // Hazards / Enemies
     const me={x:player.x,y:player.y,w:player.w,h:player.h};
     const hit=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
     let died=false;
     for(const h of L.hz){
-      if(h.t==='spike'){ const hb={x:h.x,y:h.y-h.h,w:h.w,h:h.h}; if(hit(me,hb)){died=true;break;} }
-      else if(h.t==='laser'){ const hb={x:(h.axis==='x'?(h.x+(h.offset||0)):h.x),y:(h.axis==='y'?(h.y+(h.offset||0)):h.y),w:h.w,h:h.h}; if(hit(me,hb)){died=true;break;} }
+      if(h.t==='spike'){const hb={x:h.x,y:h.y-h.h,w:h.w,h:h.h}; if(hit(me,hb)){died=true;break;}}
+      else if(h.t==='laser'){const hb={x:(h.axis==='x'?(h.x+(h.offset||0)):h.x),y:(h.axis==='y'?(h.y+(h.offset||0)):h.y),w:h.w,h:h.h}; if(hit(me,hb)){died=true;break;}}
     }
     if(!died){ for(const e of L.en){ if(hit(me,e)){died=true;break;} } }
     if(died){ respawn(false,true); }
@@ -437,15 +336,15 @@
       overlay.style.display='flex';
       ovTitle.textContent=(levelIndex===LEVELS.length-1)?'Run Complete!':`Level ${levelIndex+1} Complete!`;
       ovBody.textContent=`Time: ${sec.toFixed(2)}s • Deaths: ${run.deaths}`;
-      nextBtn.onclick=()=>{ overlay.style.display='none'; if(levelIndex<LEVELS.length-1) startLevel(++levelIndex); else startLevel(0); };
-      retryBtn.onclick=()=>{ overlay.style.display='none'; startLevel(levelIndex); };
+      nextBtn.onclick=()=>{overlay.style.display='none'; if(levelIndex<LEVELS.length-1) startLevel(++levelIndex); else startLevel(0);};
+      retryBtn.onclick=()=>{overlay.style.display='none'; startLevel(levelIndex);};
       return requestAnimationFrame(step);
     }
 
     // Fall death
     if(player.y>groundY+900) respawn(false,true);
 
-    // Camera
+    // Camera (look-ahead)
     const viewW=canvas.width/DPR;
     const baseLA=140+Math.abs(player.vx)*0.35+(player.onGround?0:80);
     const maxLA=(player.onGround?viewW*0.28:viewW*0.34);
@@ -468,7 +367,8 @@
   }
   function drawSlope(s,c){
     const steps=10;
-    for(let i=0;i<steps;i++){ const t0=i/steps,t1=(i+1)/steps;
+    for(let i=0;i<steps;i++){
+      const t0=i/steps,t1=(i+1)/steps;
       const x0=s.x1+(s.x2-s.x1)*t0, y0=s.y1+(s.y2-s.y1)*t0;
       const x1=s.x1+(s.x2-s.x1)*t1, y1=s.y1+(s.y2-s.y1)*t1;
       glowRect(x0,Math.min(y0,y1)-6,(x1-x0),6,c,1);
@@ -489,11 +389,25 @@
     const viewY=Math.floor(camY-canvas.height/(2*DPR));
     ctx.save(); ctx.translate(-viewX,-viewY);
 
-    for(const p of L.pads){ if(p.t==='rect') glowRect(p.x,p.y,p.w,p.h,'#39d2ff',1); else drawSlope(p,'#39d2ff'); }
+    // pads
+    for(const p of L.pads){
+      if(p.t==='rect') glowRect(p.x,p.y,p.w,p.h,'#39d2ff',1);
+      else if(p.t==='slope') drawSlope(p,'#39d2ff');
+      else if(p.t==='crumble'){
+        if(!p.active){ glowRect(p.x,p.y,p.w,p.h,'#ffd27f',0.35); }
+        else{
+          const warn=Math.min(1,p.timer/Math.max(0.0001,p.breakDelay));
+          glowRect(p.x,p.y,p.w,p.h,'#ffd27f',0.6+0.2*warn);
+          ctx.globalAlpha=0.3+0.3*warn; ctx.fillStyle='#fff4c2'; ctx.fillRect(p.x,p.y,p.w,4); ctx.globalAlpha=1;
+        }
+      }
+    }
     if(L.plats){ for(const m of L.plats){ glowRect(m.x,m.y,m.w,m.h,'#8ee3ff',.95); } }
+
+    // hazards
     for(const h of L.hz){
       if(h.t==='spike'){
-        ctx.fillStyle='#39d2ff'; const baseY=h.y, triW=h.w/3;
+        ctx.fillStyle='#39d2ff'; const baseY=h.y,triW=h.w/3;
         for(let i=0;i<3;i++){ const x0=h.x+i*triW,x1=x0+triW/2,x2=x0+triW;
           ctx.beginPath(); ctx.moveTo(x0,baseY); ctx.lineTo(x2,baseY); ctx.lineTo(x1,baseY-h.h); ctx.closePath(); ctx.fill(); }
       }else if(h.t==='laser'){
@@ -501,8 +415,11 @@
         glowRect(h.x+ox,h.y+oy,h.w,h.h,'#ff6fa6',.9);
       }
     }
+
+    // enemies
     for(const e of L.en){ glowRect(e.x,e.y,e.w,e.h,'#ffe066',.95); }
 
+    // goal
     const g=L.goal; const t=performance.now()/1000;
     const cx=g.x+g.w/2, cy=g.y+g.h/2;
     glowRect(g.x,g.y,g.w,g.h,'#9ffff0',1);
